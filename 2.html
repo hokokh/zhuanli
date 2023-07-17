@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B站 - hokokh</title>
+    <style>
+        /* 设置title */
+        #div_title {
+            font-size: 20px;
+            font-weight: 900;
+            margin-bottom: 10px;
+        }
+
+        /* 设置清除按钮的间距 */
+        .button_clear {
+            margin-left: 90px;
+            margin-right: 90px;
+        }
+
+        /* 设置复制按钮的间距 */
+        .button_copy {
+            margin-left: 40px;
+            margin-right: 40px;
+            margin-top: 15px;
+        }
+
+        /*设置输入框（附图标记、简写权要） */
+        #import_num,
+        #import_power {
+            width: 300px;
+            height: 200px;
+            resize: none;
+        }
+
+        /* 输出框 */
+        #output_power,
+        #output_you,
+        #output_shi {
+            display: block;
+            width: 610px;
+            height: 110px;
+            resize: none;
+        }
+
+        #output_you {
+            margin: 7px;
+        }
+
+        /* 设置错误提示框 */
+        #div_tip {
+            display: none;
+            width: 610px;
+            height: 110px;
+            margin-top: 15px;
+            text-align: left;
+            overflow-x: auto;
+        }
+
+        /* a标签 */
+        a {
+            text-decoration: none;
+        }
+
+        a:visited {
+            color: blue;
+        }
+    </style>
+</head>
+
+<body>
+    <center>
+        <div id="div_title">
+            专利辅助工具 -
+            <a href="https://space.bilibili.com/452238107" target="_blank">Bug反馈</a>
+        </div>
+
+        <!-- 清除按钮 -->
+        <div>
+            <button onclick="clear_import('#import_num')">清除附图标记</button>
+            <button class="button_clear" onclick="clear_import('#import_num','#import_power')">同时清除</button>
+            <button onclick="clear_import('#import_power')">清除简写权要</button>
+        </div>
+
+
+        <!-- 获取附图标记、简写的权要 -->
+        <textarea id="import_num" onkeyup="show_output()"></textarea>
+        <textarea id="import_power" onkeyup="show_output()"></textarea>
+
+        <!-- 错误提示框 -->
+        <div id="div_tip"></div>
+
+        <!-- 复制内容按钮 -->
+        <div>
+            <button onclick="copy_output('#output_power')">复制权要</button>
+            <button class="button_copy" onclick="copy_output('#output_you')">复制优选的</button>
+            <button onclick="copy_output('#output_shi')">复制实施列</button>
+        </div>
+
+        <!-- 输出权要、优选的、实施例 -->
+        <textarea id="output_power" readonly></textarea>
+        <textarea id="output_you" readonly></textarea>
+        <textarea id="output_shi" readonly></textarea>
+
+    </center>
+
+    <script>
+
+        //添加提示信息
+        document.querySelector("#import_num").placeholder = "这里输入附图标记\n\n语法：\n\n1、电机；2、搅拌轴；3、……。"
+            + "\n\n\n小提示：\n\n（1）最后一个附图标记必须以句号结尾。"
+            + "\n\n（2）、和；均为中文状态下的输入";
+
+        document.querySelector("#import_power").placeholder = "这里输入简写的“权要”\n\n语法：\n\n 1 => 电机（1）\n\n·1 => 1"
+            + "\n\n\n\n小提示：\n\n想要输出35.6度，则输入·35.·6度"
+
+        document.querySelector("#output_power").placeholder = "这里输出“权要”，点击复制权要可以一键复制。";
+        document.querySelector("#output_you").placeholder = "1、这里输出“优选的”，点击复制权要可以一键复制。\n\n2、自动去除括号和数字，并添加优选的。";
+        document.querySelector("#output_shi").placeholder = "1、这里输出“实施例”，点击复制权要可以一键复制。\n\n2、自动去除括号，并添加在本实施例中。";
+
+
+        //1、函数，获取附图标记
+        function get_num() {
+            let num = document.querySelector("#import_num").value;
+            if (!num) return "";
+
+            //检测附图标记的格式错误
+            let error_arr = [];
+            let check_error = num.match(/(\d+、)?[^；。]+([；。]|.)/mgi);
+            check_error = check_error ? check_error : []
+            for (let i = 0; i < check_error.length; i++) {
+
+                if (!check_error[i].match(/^\d+、[^；。]+(；|。)$/mgi)) {
+                    error_arr.push(check_error[i])
+                } else if (check_error[i].match(/\d+、/mgi).length >= 2) {
+                    error_arr.push(check_error[i])
+                } else if (check_error[i].match(/\d+、(；|。)/mgi)) {
+                    error_arr.push(check_error[i])
+                }
+
+            }
+            //输出提示错误格式
+            show_error(error_arr, "附图标记格的式错误，正确格式为：1、xxx； 或 1、xxx。<br>");
+            if (error_arr[0]) return "";
+
+            //检测重复的标号，或零件名
+            let check_repeat = num.match(/\d+、[^；。]+[；。]/mgi);
+            check_repeat.filter((value, index, arr) => {
+                if (arr.indexOf(value) != index) {
+                    error_arr.push(value)
+                }
+            })
+            //输出提示错误格式
+            show_error(error_arr, "附图标记重复：");
+            if (error_arr[0]) return "";
+
+
+
+            //检测重复的序号
+            let check_num = num.match(/(\d+)、/mgi);
+            check_num.filter((value, index, arr) => {
+                if (arr.indexOf(value) != index) {
+                    error_arr.push(value)
+                }
+            })
+            //输出提示错误格式
+            show_error(error_arr, "附图标记中的序号重复：");
+            if (error_arr[0]) return "";
+
+
+            //检测重复的零件名
+            let check_name = num.match(/(?<=\d+、)[^；。]+/mgi);
+            check_name.filter((value, index, arr) => {
+                if (arr.indexOf(value) != index) {
+                    error_arr.push(value)
+                }
+            })
+            //输出提示错误格式
+            show_error(error_arr, "附图标记中的零件名重复：");
+            if (error_arr[0]) return "";
+
+            //返回正确的附图标记对象
+            let str_num = num.replace(/(\d+)、([^；。]+)([；。])/mgi, `"_a$1a_":"$2（$1）",`);
+            str_num = "{" + str_num.replace(/(,)$/mgi, "}");
+            return JSON.parse(str_num);
+            console.log(JSON.parse(str_num));
+
+        }
+
+        //2、函数，获取简写全要
+        function get_power() {
+            let power = document.querySelector("#import_power").value;
+            if (!get_num()) {
+                return ""
+            }
+            let empty_num = ""
+
+            // 将权要序号转换成aa1.格式
+            power = power.replace(/(\d+)([、.]([\s]+)?根据权利要求\d+)/mgi, "aa$1$2");
+            // console.log(power);
+
+            power = power.replace(/(^1[、.])|(aa\d+[、.])|(根据权利要求\d+)|(·\d+)|(\d+)/mgi, (reg_1) => {
+                // console.log(1, reg_1);
+
+                if (reg_1.match(/1[、.]$|^aa\d+[.、]$|^根据权利要求\d+|·\d+/mgi)) {
+                    console.log(11, reg_1);
+                    return reg_1
+                } else if (get_num()[`_a${reg_1}a_`] == undefined) {
+                    //如果为undefined则返回原数字
+                    console.log(22, reg_1);
+                    empty_num += "<span style='color:red;'>" + reg_1 + "</span> ，"
+                    return reg_1;
+                } else {
+                    return get_num()[`_a${reg_1}a_`]
+                }
+
+            })
+
+            let div_tip = document.querySelector("#div_tip");
+            div_tip.style.display = "block";
+            empty_num
+                ? div_tip.innerHTML = "<b>权要中出现未知的附图序号：</b><br><br>" + empty_num.toString()
+                : div_tip.style.display = "none"
+            if (empty_num) return ""
+            // console.log(power, empty_num)
+            // return ""
+            power = power.replace(/aa(\d+[、.])/mgi, "$1")
+                .replace(/·(\d+)/mgi, "$1")
+            return power;
+        }
+
+        //3、函数，返回替换后的实施列-----
+        function get_you() {
+            let you = get_power() ? get_power() : "";
+            you = you.replace(/(\d+.根据权利要求.+其特征在于：)/mgi, `\n优选的：`)
+                .replace(/(^1(.|、))|(（\d+）)/mgi, "")
+                .replace(/·(\d+)/mgi, "$1")
+
+            return you;
+        }
+
+        //4、函数，返回替换后的实施列-----
+        function get_shi() {
+            let shi = get_power() ? get_power() : "";
+            shi = shi.replace(/(\d+.根据权利要求.+其特征在于：)/mgi, `\n在本实施例中，`)
+                .replace(/其特征在于：|^(\d+\.)[\t\s]*|（|）|所述/mgi, "")
+                .replace(/·(\d+)/mgi, "$1")
+
+            return shi;
+        }
+
+        //5、函数，显示替换结果
+        function show_output() {
+
+            //输出替换后的权要
+            document.querySelector("#output_power").value = get_power();
+
+            //输出实施例
+            document.querySelector("#output_you").value = get_you() ? get_you() : "";
+
+            //输出实施例
+            document.querySelector("#output_shi").value = get_shi() ? get_shi() : "";
+
+        }
+
+        //6、函数，显示附图标记的错误
+        function show_error(error_arr, str1, str2) {
+
+            //获取错误提示框
+            let div_tip = document.querySelector("#div_tip");
+            div_tip.style.display = "block";
+
+            //获取附图标记
+            let error_tip = document.querySelector("#import_num").value;
+            error_tip = error_tip.replace(/</mgi, "&lt;");
+
+            //添加颜色提示信息
+            for (let i = 0; i < error_arr.length; i++) {
+                let reg = new RegExp(`(${error_arr[i]})(?!</)`, "mgi");
+                let color = "rgb("
+                    + Math.floor(Math.random() * 250) + ","
+                    + Math.floor(Math.random() * 250) + ",0)"
+
+                error_tip = error_tip.replace(reg, `<b style="color:${color};">$1</b>`);
+            }
+
+            error_arr[0]
+                ? div_tip.innerHTML = "<b>" + str1 + "</b><br><br>" + error_tip
+                : div_tip.style.display = "none"
+
+        }
+
+        //7、函数，复制输出结果
+        function copy_output(id) {
+            document.querySelector(id).select();
+            document.execCommand("copy");
+        }
+
+        //8、函数，清除用户的输入
+        function clear_import() {
+            for (let i = 0; i < arguments.length; i++) {
+                document.querySelector(arguments[i]).value = null
+            }
+            document.querySelector("#output_power").value = "";
+            document.querySelector("#output_you").value = "";
+            document.querySelector("#output_shi").value = "";
+            let div_tip = document.querySelector("#div_tip");
+            div_tip.style.display = "none";
+        }
+    </script>
+</body>
+
+</html>
