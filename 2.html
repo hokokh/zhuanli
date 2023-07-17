@@ -233,7 +233,7 @@
         //3、函数，返回替换后的实施列-----
         function get_you() {
             let you = get_power() ? get_power() : "";
-            you = you.replace(/(\d+.根据权利要求.+其特征在于：)/mgi, `\n优选的：`)
+            you = you.replace(/(\d+.根据权利要求.+其特征在于：)/mgi, `优选的：`)
                 .replace(/(^1(.|、))|(（\d+）)/mgi, "")
                 .replace(/·(\d+)/mgi, "$1")
 
@@ -243,7 +243,7 @@
         //4、函数，返回替换后的实施列-----
         function get_shi() {
             let shi = get_power() ? get_power() : "";
-            shi = shi.replace(/(\d+.根据权利要求.+其特征在于：)/mgi, `\n在本实施例中，`)
+            shi = shi.replace(/(\d+.根据权利要求.+其特征在于：)/mgi, `在本实施例中，`)
                 .replace(/其特征在于：|^(\d+\.)[\t\s]*|（|）|所述/mgi, "")
                 .replace(/·(\d+)/mgi, "$1")
 
