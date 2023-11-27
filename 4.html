@@ -124,7 +124,6 @@
 
         //获取附图标记
         function get_Num() {
-            console.log("get_num执行了");
             let txt_num = document.querySelector("#import_num").value;
             if (!txt_num) { show_num_Tip("", []); return "" }
 
@@ -223,8 +222,8 @@
 
             //将不需要替换的数字转换成HokokH-1格式
             txt_power = txt_power.replace(/^[\s\n]+/, "")   //将开头的空格和换行替换成空
-                .replace(/^(\d+[\s]*[、.][\s]*)/, "HokokH-$1")        //主权序号不替换
-                .replace(/(\d+[\s]*[、.][\s]*)(根据权利要求)(\d+)(所述的)/mgi, "HokokH-$1$2HokokH-$3$4")    //从权序号不替换
+                .replace(/^(\d+[\s]*[、.．][\s]*)/, "HokokH-$1")        //主权序号不替换
+                .replace(/(\d+[\s]*[、.．][\s]*)(根据权利要求)(\d+)(所述的)/mgi, "HokokH-$1$2HokokH-$3$4")    //从权序号不替换
                 .replace(/(·)(\d+)/mgi, "HokokH-$2")    //用户输入的数字不替换
 
             //记录简写的权要中未知标号
@@ -257,9 +256,9 @@
         //获取优选的（实用新型内容）
         function get_Content() {
             let txt_content = get_Power() ? get_Power() : "";
-            txt_content = txt_content.replace(/\d+[\s]*[、.][\s]*根据权利要求.+其特征在于/mgi, "优选的")    //将从权的开头替换成"优选的"
+            txt_content = txt_content.replace(/\d+[\s]*[、.．][\s]*根据权利要求.+其特征在于/mgi, "优选的")    //将从权的开头替换成"优选的"
                 .replace(/其特征在于./mgi, "")      //删除主权中的"其特征在于"
-                .replace(/^\d+[\s]*[、.][\s]*/, "")  //删除主权开头的数字
+                .replace(/^\d+[\s]*[、.．][\s]*/, "")  //删除主权开头的数字
                 .replace(/（\d+）/mgi, "")  //删除实用新型中的数字
 
             return txt_content
@@ -268,9 +267,9 @@
         //获取实施例
         function get_Embodiment() {
             let txt_embodiment = get_Power() ? get_Power() : "";
-            txt_embodiment = txt_embodiment.replace(/\d+[\s]*[、.][\s]*根据权利要求.+其特征在于/mgi, "本实施例中，具体的")    //将从权的开头替换成"本实施例中，具体的"
+            txt_embodiment = txt_embodiment.replace(/\d+[\s]*[、.．][\s]*根据权利要求.+其特征在于/mgi, "本实施例中，具体的")    //将从权的开头替换成"本实施例中，具体的"
                 .replace(/其特征在于./mgi, "")      //删除主权中的"其特征在于"
-                .replace(/^\d+[\s]*[、.][\s]*/, "")  //删除主权开头的数字
+                .replace(/^\d+[\s]*[、.．][\s]*/, "")  //删除主权开头的数字
                 .replace(/[（）]|所述/mgi, "")  //保留数字，删除括号和所述
             return txt_embodiment;
         }
