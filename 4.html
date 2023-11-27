@@ -282,8 +282,8 @@
             let divide_2 = "]";
 
             //正则
-            let reg_delte = new RegExp(`(?<!·)\\${divide_1}(.*)\\${divide_2}`, "mgi");//删除[]前面的空格和换行
-            let reg_delte_1 = new RegExp(`[\\n\\s]*(?<!·)\\${divide_1}(.*)\\${divide_2}`, "mgi");//不删除[]前面的空格和换行
+            let reg_delte = new RegExp(`(?<!·)\\${divide_1}([^\\]]*)\\${divide_2}`, "mgi");//删除[]前面的空格和换行
+            let reg_delte_1 = new RegExp(`[\\n\\s]*(?<!·)\\${divide_1}(.|\n)*\\${divide_2}`, "mgi");//不删除[]前面的空格和换行
             let reg_restore = new RegExp(`·(\\${divide_1})`, "mgi");
 
             //输出替换后的权要
