@@ -121,8 +121,7 @@
         document.querySelector("#output_content").placeholder = "1、这里输出“实用新型内容”，点击【复制实用新型内容】可以一键复制。\n\n2、自动去除括号和数字，并添加“优选的”。";
         document.querySelector("#output_embodiment").placeholder = "1、这里输出“实施例”，点击【复制实施例】可以一键复制。\n\n2、自动去除括号，并添加“本实施例中，具体的”。";
 
-
-        //获取附图标记
+ //获取附图标记
         function get_Num() {
             let txt_num = document.querySelector("#import_num").value;
             if (!txt_num) { show_num_Tip("", []); return "" }
@@ -229,9 +228,16 @@
             //记录简写的权要中未知标号
             let unknown_num = [];
 
+            //记录简写权要中的全部标号
+            let power_num = [];
+
             //转换附图标记，不支持匹配非HokokH-开头的数字，只好全部匹配，然后判断是否有HokokH-
             txt_power = txt_power.replace(/HokokH-\d+|\d+/mgi, value => {
                 let replace_name = get_Num()[value];
+
+                //简写权要中全部的附图标记
+                !value.match(/HokokH-/mgi) ? power_num.push(Number(value)) : "";
+
                 if (value.match(/HokokH-/mgi)) {
                     return value;   //匹配到不替换的，则原样返回
                 } else if (replace_name === undefined) {
@@ -247,6 +253,13 @@
             show_Tip(title_txt + "错误，未知标号！", unknown_num)
             if (unknown_num.length > 0) { return "" }
 
+            //获取声明但未使用的附图标记
+            let not_used = [];
+            for (let id in get_Num()) {
+                power_num.includes(Number(id)) ? "" : not_used.push(`<b style="color:red;">${id}</b>，`);
+            }
+            not_used.length > 0 ? show_Tip(title_txt + "错误，下面的附图标记未在权要中使用！", not_used) : "";
+ 
             //将不替换的数字恢复原样
             txt_power = txt_power.replace(/HokokH-/mgi, "");
 
@@ -261,7 +274,7 @@
                 .replace(/^\d+[\s]*[、.．][\s]*/, "")  //删除主权开头的数字
                 .replace(/（\d+）/mgi, "")  //删除实用新型中的数字
 
-            return txt_content
+            return txt_content;
         }
 
         //获取实施例
@@ -287,9 +300,18 @@
             let reg_restore = new RegExp(`·(\\${divide_1})`, "mgi");
 
             //输出替换后的权要
-            document.querySelector("#output_power").innerHTML = get_Power()
+            let get_power = get_Power()
                 .replace(reg_delte_1, "")
                 .replace(reg_restore, "$1");
+            document.querySelector("#output_power").innerHTML = get_power;
+
+            //显示权要总字数
+            let get_button = document.querySelector("body > center > div:nth-child(6) > button:nth-child(1)");
+            if (get_power) {
+                get_button.innerHTML = `复制权要：<b>${get_words_Number(get_power)}</b> 字`;
+            } else {
+                get_button.innerText = "复制权要";
+            }
 
             // 输出实用新型内容
             document.querySelector("#output_content").innerHTML = get_Content()
@@ -349,7 +371,7 @@
             //获取_tipArr中的文本
             let txt_tip = "";
             for (let i = 0; i < _tipArr.length; i++) {
-                txt_tip += _tipArr[i]
+                txt_tip += _tipArr[i];
             }
 
             // 显示
@@ -378,6 +400,17 @@
             document.querySelector("#output_embodiment").value = "";
             let div_tip = document.querySelector("#div_tip");
             div_tip.style.display = "none";
+
+            //清除字数提示
+            let get_button = document.querySelector("body > center > div:nth-child(6) > button:nth-child(1)");
+            get_button.innerText = "复制权要";
+        }
+
+        //获取总字数
+        function get_words_Number(str) {
+            let segmenter = new Intl.Segmenter("zh", { granularity: "grapheme" });
+            let num = [...segmenter.segment(str)].length;
+            return num;
         }
     </script>
 </body>
