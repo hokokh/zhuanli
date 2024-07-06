@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B站 - hokokh</title>
+    <style>
+        /* 设置title */
+        #div_title {
+            font-size: 20px;
+            font-weight: 900;
+            margin-bottom: 10px;
+        }
+
+        /* 设置清除按钮的间距 */
+        .button_clear {
+            margin-left: 90px;
+            margin-right: 90px;
+        }
+
+        /* 设置复制按钮的间距 */
+        .button_copy {
+            margin-left: 40px;
+            margin-right: 40px;
+            margin-top: 15px;
+        }
+
+        /*设置输入框（附图标记、简写权要） */
+        #import_num,
+        #import_power {
+            width: 300px;
+            height: 233px;
+            resize: none;
+        }
+
+        /* 输出框 */
+        #output_power,
+        #output_content,
+        #output_embodiment {
+            display: block;
+            width: 610px;
+            height: 110px;
+            resize: none;
+        }
+
+        #output_content {
+            margin: 7px;
+        }
+
+        /* 设置错误提示框 */
+        #div_tip {
+            display: none;
+            width: 610px;
+            height: 110px;
+            margin-top: 15px;
+            text-align: left;
+            overflow-x: auto;
+        }
+
+        /* a标签 */
+        a {
+            text-decoration: none;
+        }
+
+        a:visited {
+            color: blue;
+        }
+    </style>
+</head>
+
+<body>
+    <center>
+        <div id="div_title">
+            专利辅助工具 -
+            <a href="https://space.bilibili.com/452238107" target="_blank">Bug反馈</a>
+        </div>
+
+        <!-- 清除按钮 -->
+        <div>
+            <button onclick="clear_Import('#import_num')">清除附图标记</button>
+            <button class="button_clear" onclick="clear_Import('#import_num','#import_power')">同时清除</button>
+            <button onclick="clear_Import('#import_power')">清除简写权要</button>
+        </div>
+
+
+        <!-- 获取附图标记、简写的权要 -->
+        <textarea id="import_num" onkeyup="show_Output()"></textarea>
+        <textarea id="import_power" onkeyup="show_Output()"></textarea>
+
+        <!-- 错误提示框 -->
+        <div id="div_tip"></div>
+
+        <!-- 复制内容按钮 -->
+        <div>
+            <button onclick="copy_Txt('#output_power')">复制权要</button>
+            <button class="button_copy" onclick="copy_Txt('#output_content')">复制实用新型内容</button>
+            <button onclick="copy_Txt('#output_embodiment')">复制实施列</button>
+        </div>
+
+        <!-- 输出权要、优选的、实施例 -->
+        <textarea id="output_power" readonly></textarea>
+        <textarea id="output_content" readonly></textarea>
+        <textarea id="output_embodiment" readonly></textarea>
+
+    </center>
+
+    <script>
+
+        //添加提示信息
+        document.querySelector("#import_num").placeholder = "这里输入附图标记\n\n语法：\n1-电机；2-搅拌轴；3-……。"
+            + "\n\n\n小提示：\n（1）-和；均为中文字符；"
+            + "\n\n（2）按住Ctrl键，同时滚动鼠标中键，可以改变当前页面的大小；";
+
+        document.querySelector("#import_power").placeholder = "这里输入简写的“权要”\n\n语法：\n ·1 => 电机（1）\n\n（1） => 所述电机（1）\n\n"
+            + "\n\n小提示：\n（1）·位于键盘的左上角，数字1的左边，中文输入法下；";
+
+        document.querySelector("#output_power").placeholder = "这里输出“替换后的权要”，点击【复制权要】可以一键复制。";
+        document.querySelector("#output_content").placeholder = "1、这里输出“实用新型内容”，点击【复制实用新型内容】可以一键复制。\n\n2、自动去除括号和数字，并添加“优选的”。";
+        document.querySelector("#output_embodiment").placeholder = "1、这里输出“实施例”，点击【复制实施例】可以一键复制。\n\n2、自动去除括号，并添加“本实施例中，具体的”。";
+
+
+        //获取附图标记
+        function get_Num() {
+            let txt_num = document.querySelector("#import_num").value;
+            if (!txt_num) { show_num_Tip("", []); return "" }
+
+            //将结尾的空格和换行全部替换为空
+            txt_num = txt_num.replace(/[\s\n]+$/mgi, "")
+
+            //分割附图标记：1-电机；2-叶片。
+            let divide_1 = "-";
+            let divide_2 = "；";
+            let divide_3 = "。";
+
+            //正则
+            let reg_all = new RegExp(`(\\d+${divide_1})?([^${divide_2}${divide_3}]+)?([${divide_2}${divide_3}]|.)`, "mgi");
+            let reg_right = new RegExp(`^(\\d+)${divide_1}([^${divide_2}${divide_3}]+)(${divide_2}|${divide_3})$`, "mgi");
+            let reg_error_1 = new RegExp(`\\d+${divide_1}`, "mgi"); //多个数字的错误，2、搅 3、拌杆
+
+            //检查错误格式的附图标记
+            let title_txt = `<b style='font-size:20px'>附图标记：</b>`;
+            let error_arr = [];
+            let txt_arr = txt_num.match(reg_all);
+            for (let i = 0; i < txt_arr.length; i++) {
+                //将开头的换行符替换为空
+                let single = txt_arr[i].replace(/^[\s\n]+/mgi, "");
+
+                if (!single.match(reg_right)) {
+                    //格式不正确，如果
+                    let add_txt = (i === txt_arr.length - 1) ? single + "$" : single;
+                    error_arr.push(add_txt);
+                } else if (single.match(reg_error_1).length > 1) {
+                    error_arr.push(single);
+                } else if (single.match(/\s+/mgi)) {
+                    error_arr.push(single);
+                }
+            }
+            show_num_Tip(title_txt + "格式错误，正确格式为：1-xxx； 或 1-xxx。", error_arr)
+            if (error_arr.length > 0) { return "" }
+
+            //检查整体重复的附图标记
+            {
+                let repeat_all = [];
+                txt_arr.forEach((value, index, arr) => {
+                    if (arr.indexOf(value) != index) {
+                        repeat_all.push(value)
+                    }
+                });
+
+                show_num_Tip(title_txt + "序号和零件名重复！", repeat_all);
+                if (repeat_all.length > 0) { return "" }
+            }
+
+            //检查重复的数字标号
+            {
+                let repeat_num = [];
+                let reg_num = new RegExp(`\\d+${divide_1}`, "mgi");
+                let num_arr = txt_num.match(reg_num);
+                num_arr.forEach((value, index, arr) => {
+                    if (arr.indexOf(value) != index) {
+                        repeat_num.push(value)
+                    }
+                });
+                show_num_Tip(title_txt + "数字标号重复！", repeat_num);
+                if (repeat_num.length > 0) { return "" }
+            }
+
+
+            //检查重复的零件名
+            {
+                let repeat_name = [];
+                let reg_name = new RegExp(`(?<=\\d+${divide_1})[^${divide_2}${divide_3}]+`, "mgi");
+                let name_arr = txt_num.match(reg_name);
+                name_arr.forEach((value, index, arr) => {
+                    if (arr.indexOf(value) != index) {
+                        repeat_name.push(value);
+                    }
+                });
+                show_num_Tip(title_txt + "零件名重复！", repeat_name);
+                if (repeat_name.length > 0) { return "" }
+            }
+
+
+            //返回转换后的附图标记，{1: '电机（1）',  301: '叶片（301）'}
+            let convert_obj = {};
+            for (let i = 0; i < txt_arr.length; i++) {
+                txt_arr[i].replace(reg_right, (all, a1, a2) => {
+                    convert_obj[a1] = `${a2}（${a1}）`
+                })
+            }
+
+            return convert_obj;
+        }
+
+        //获取简写的权要
+        function get_Power() {
+            let txt_power = document.querySelector("#import_power").value;
+            if (!get_Num()) { return "" }
+
+            //记录简写的权要中未知标号
+            const unknown_num = [];
+
+            //记录简写权要中的全部标号
+            const power_num_all = [];
+
+            //转换匹配的简写
+            const reg_abbr = new RegExp("·\\d+|（\\d+）", "mgi");
+            txt_power = txt_power.replace(reg_abbr, value => {
+
+                //匹配简写中的标号
+                const only_num = value.match(/\d+/, "mgi")[0];
+                power_num_all.push(Number(only_num));
+
+                //获取未知标号，标号未知则true
+                const unknown_bool = (get_Num()[only_num] == undefined);
+                if (unknown_bool) { unknown_num.push(`<b style="color:red;">${value}</b>，`) }
+
+                //替换标号，判断是否添加所述，为真不添加
+                const add_bool = value.includes("·");
+                const part_name = get_Num()[only_num];
+                if (add_bool) {
+                    return part_name;
+                } else {
+                    return "所述" + part_name;
+                }
+            })
+
+            //显示未知标号
+            let title_txt = `<b style='font-size:20px'>简写权要：</b>`;
+            show_Tip(title_txt + "错误，使用了未知标号！", unknown_num);
+            if (unknown_num.length > 0) { return "" }
+
+
+            //获取声明但未使用的附图标记
+            let not_used = [];
+            for (let id in get_Num()) {
+                console.log(power_num_all, id, power_num_all.includes(Number(id)));
+
+                power_num_all.includes(Number(id)) ? "" : not_used.push(`<b style="color:red;">${id}</b>，`);
+            }
+            not_used.length > 0 ? show_Tip(title_txt + "错误，下面的附图标记在权要中未使用！", not_used) : "";
+
+            return txt_power;
+        }
+
+        //获取优选的（实用新型内容）
+        function get_Content() {
+            let txt_content = get_Power() ? get_Power() : "";
+            txt_content = txt_content.replace(/\d+[\s]*[、.．][\s]*根据权利要求.+其特征在于/mgi, "优选的")    //将从权的开头替换成"优选的"
+                .replace(/其特征在于./mgi, "")      //删除主权中的"其特征在于"
+                .replace(/^\d+[\s]*[、.．][\s]*/, "")  //删除主权开头的数字
+                .replace(/（\d+）/mgi, "")  //删除实用新型中的数字
+
+            return txt_content
+        }
+
+        //获取实施例
+        function get_Embodiment() {
+            let txt_embodiment = get_Power() ? get_Power() : "";
+            txt_embodiment = txt_embodiment.replace(/\d+[\s]*[、.．][\s]*根据权利要求.+其特征在于/mgi, "本实施例中，具体的")    //将从权的开头替换成"本实施例中，具体的"
+                .replace(/其特征在于./mgi, "")      //删除主权中的"其特征在于"
+                .replace(/^\d+[\s]*[、.．][\s]*/, "")  //删除主权开头的数字
+                .replace(/[（）]|所述/mgi, "")  //保留数字，删除括号和所述
+            return txt_embodiment;
+        }
+
+        //输出最终结果
+        function show_Output() {
+
+            //输出替换后的权要
+            let get_power = get_Power();
+            document.querySelector("#output_power").innerHTML = get_power;
+
+            //显示权要总字数
+            let get_button = document.querySelector("body > center > div:nth-child(6) > button:nth-child(1)");
+            if (get_power) {
+                get_button.innerHTML = `复制权要：<b>${get_words_Number(get_power)}</b> 字`;
+            } else {
+                get_button.innerText = "复制权要";
+            }
+
+            // 输出实用新型内容
+            document.querySelector("#output_content").innerHTML = get_Content();
+
+            //输出实施例
+            document.querySelector("#output_embodiment").innerHTML = get_Embodiment();
+        }
+
+        //显示附图标记的错误信息
+        function show_num_Tip(_title, _tipArr) {
+
+            //获取输出标签
+            let div_tip = document.querySelector("#div_tip");
+            div_tip.style.display = "block";
+
+            //获取附图标记
+            let txt_num = document.querySelector("#import_num").value;
+
+            //获取_tipArr中的文本
+            for (let i = 0; i < _tipArr.length; i++) {
+
+                //如果错误超过默认颜色的数量，则随机生成颜色
+                let color = ["red", "green", "skyblue", "pink", "blue"];
+                if (i > color.length - 1) {
+                    color = "rgb("
+                        + Math.floor(Math.random() * 250) + ","
+                        + Math.floor(Math.random() * 250) + ",0)"
+                } else {
+                    color = color[i];
+                }
+
+                let reg = new RegExp(`(${_tipArr[i]})(?!</b>)`, "mgi");
+                txt_num = txt_num.replace(reg, value => {
+                    value = value.replace(/</mgi, "&lt;");//xss问题
+                    return `<b style="color:${color};">${value}</b>`
+                })
+            }
+
+            // 显示
+            div_tip.innerHTML = `${_title}<br><br>${txt_num}`
+
+            //如果错误为空，则隐藏提示框
+            _tipArr[0] ? "" : div_tip.style.display = "none";
+        }
+
+        //显示错误信息，无错误信息则不显示
+        function show_Tip(_title, _tipArr) {
+
+            //获取输出标签
+            let div_tip = document.querySelector("#div_tip");
+            div_tip.style.display = "block";
+
+            //获取_tipArr中的文本
+            let txt_tip = "";
+            for (let i = 0; i < _tipArr.length; i++) {
+                txt_tip += _tipArr[i]
+            }
+
+            // 显示
+            div_tip.innerHTML = `${_title}<br><br>${txt_tip}`;
+
+            //如果错误为空，则隐藏提示框
+            _tipArr[0] ? "" : div_tip.style.display = "none";
+        }
+
+        //复制文本
+        function copy_Txt(_elementId) {
+            document.querySelector(_elementId).select();
+            document.execCommand("copy");
+            setTimeout(() => {
+                document.execCommand('unselect');
+            }, 800);
+        }
+
+        //清空输入
+        function clear_Import() {
+            for (let i = 0; i < arguments.length; i++) {
+                document.querySelector(arguments[i]).value = null
+            }
+            document.querySelector("#output_power").value = "";
+            document.querySelector("#output_content").value = "";
+            document.querySelector("#output_embodiment").value = "";
+            let div_tip = document.querySelector("#div_tip");
+            div_tip.style.display = "none";
+
+            //清除字数提示
+            let get_button = document.querySelector("body > center > div:nth-child(6) > button:nth-child(1)");
+            get_button.innerText = "复制权要";
+        }
+
+        //获取总字数
+        function get_words_Number(str) {
+            let segmenter = new Intl.Segmenter("zh", { granularity: "grapheme" });
+            let num = [...segmenter.segment(str)].length;
+            return num
+        }
+
+    </script>
+</body>
+
+</html>
