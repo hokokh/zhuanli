@@ -255,8 +255,6 @@
             //获取声明但未使用的附图标记
             let not_used = [];
             for (let id in get_Num()) {
-                console.log(power_num_all, id, power_num_all.includes(Number(id)));
-
                 power_num_all.includes(Number(id)) ? "" : not_used.push(`<b style="color:red;">${id}</b>，`);
             }
             not_used.length > 0 ? show_Tip(title_txt + "错误，下面的附图标记在权要中未使用！", not_used) : "";
